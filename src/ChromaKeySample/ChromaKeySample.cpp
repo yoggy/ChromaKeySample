@@ -20,8 +20,8 @@
 class ChromaKey : public cv::ParallelLoopBody
 {
     public:
-        ChromaKey(const cv::Mat &fg, const cv::Mat &bg, cv::Mat &dst, const cv::Scalar &color = cv::Scalar(255,0,255))
-			: ParallelLoopBody(), fg_(fg), bg_(bg), dst_(dst), color_(color)
+        ChromaKey(const cv::Mat &fg, const cv::Mat &bg, cv::Mat &dst, const cv::Scalar &color = cv::Scalar(255,0,255), const int &threshold = 30)
+			: ParallelLoopBody(), fg_(fg), bg_(bg), dst_(dst), color_(color), threshold_(threshold)
         {
         }
 
@@ -34,15 +34,25 @@ class ChromaKey : public cv::ParallelLoopBody
 
 				for (int x = 0; x < fg_.cols; ++x) {
 					int i = x * fg_.channels();
-					uchar fg_r = fg_p[i + 2];
-					uchar fg_g = fg_p[i + 1];
-					uchar fg_b = fg_p[i + 0];
 
-					uchar bg_r = bg_p[i + 2];
-					uchar bg_g = bg_p[i + 1];
-					uchar bg_b = bg_p[i + 0];
+					int ch_r = color_.val[2];
+					int ch_g = color_.val[1];
+					int ch_b = color_.val[0];
 
-					if (fg_r == color_.val[2] && fg_g == color_.val[1] && fg_b == color_.val[0]) {
+					int fg_r = fg_p[i + 2];
+					int fg_g = fg_p[i + 1];
+					int fg_b = fg_p[i + 0];
+
+					int bg_r = bg_p[i + 2];
+					int bg_g = bg_p[i + 1];
+					int bg_b = bg_p[i + 0];
+
+					int dr = fg_r - ch_r;
+					int dg = fg_g - ch_g;
+					int db = fg_b - ch_b;
+					int dd = dr * dr + dg * dg + db * db;
+
+					if (dd <= threshold_ * threshold_) {
 						dst_p[i + 2] = bg_r;
 						dst_p[i + 1] = bg_g;
 						dst_p[i + 0] = bg_b;
@@ -61,6 +71,7 @@ private:
         const cv::Mat &bg_;
         cv::Mat &dst_;
 		const cv::Scalar color_;
+		const int threshold_;
 };
 
 void draw_text(cv::Mat &canvas, const char *str, int x, int y, float scale = 1.0)
